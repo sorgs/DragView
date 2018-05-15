@@ -1,10 +1,12 @@
 package com.drageview.sorgs.dragview.widget;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Paint;
-import android.graphics.Picture;
+import android.graphics.Rect;
 import android.support.annotation.Nullable;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
@@ -18,22 +20,26 @@ import com.drageview.sorgs.dragview.R;
  * @author Sorgs.
  */
 public class DragView extends View {
+
     /**
      * 有效拖拽值
      */
     private static final int EFFECTIVE_RANGE = 10;
 
 
-    private Paint mParentPaint;
     private Paint mChildPaint;
     private int mPX1;
     private int mPY1;
     private int mPX2;
     private int mPY2;
-    private int mCX1;
-    private int mCY1;
-    private int mCX2;
-    private int mCY2;
+    private int mC1X1;
+    private int mC1Y1;
+    private int mC1X2;
+    private int mC1Y2;
+    private int mC2X1;
+    private int mC2Y1;
+    private int mC2X2;
+    private int mC2Y2;
     /**
      * 屏幕高度
      */
@@ -45,23 +51,27 @@ public class DragView extends View {
     /**
      * 整体控件宽度
      */
-    private float mParentWidth = 700f;
+    private float mParentWidth;
     /**
      * 子空间的高度
      */
-    private float mChildHeight = 300f;
+    private float mChildHeight;
     /**
      * 控件顶部高度
      */
-    private float mTopHeight = 300f;
+    private float mTopHeight = 100f;
     /**
      * 控件底部高度
      */
-    private float mBottomHeight = 300f;
+    private float mBottomHeight;
     /**
      * 屏幕宽度
      */
     private float mScreenWidth;
+
+    private Bitmap mParentBg;
+
+    private Context mContext;
 
     public DragView(Context context) {
         super(context);
@@ -73,39 +83,54 @@ public class DragView extends View {
      * 初始化
      */
     private void init(Context context) {
+
+        mContext = context;
+
         mScreenHeight = getResources().getDisplayMetrics().heightPixels;
         mScreenWidth = getResources().getDisplayMetrics().widthPixels;
-        mParentHeight = mScreenHeight - mBottomHeight - mTopHeight;
 
-        mParentPaint = new Paint();
-        mParentPaint.setColor(context.getResources().getColor(R.color.colorE));
-        mParentPaint.setStyle(Paint.Style.FILL);
+        mParentWidth = mScreenWidth - 2 * dp2px(context, 79f);
+        mParentHeight = mParentWidth * 360 / 203f;
+
+        mChildHeight = mParentWidth * 9 / 16f;
+
 
         mChildPaint = new Paint();
         mChildPaint.setColor(context.getResources().getColor(R.color.colorT));
         mChildPaint.setStyle(Paint.Style.FILL);
-
         initCalc();
 
     }
 
+    public static int dp2px(Context context, float dipValue) {
+        final float scale = context.getResources().getDisplayMetrics().density;
+        return (int) (dipValue * scale + 0.5f);
+    }
+
     /**
      * 坐标点的计算
+     * X轴基本不变，变化的是Y轴
      */
     private void initCalc() {
         //计算父控件的位置点
-        mPX1 = (int) (mScreenWidth / 2 - mParentWidth / 2);
+        mPX1 = (int) (mScreenWidth / 2f - mParentWidth / 2f);
         mPY1 = (int) (mTopHeight);
-        mPX2 = (int) (mPX1 + mParentWidth);
-        mPY2 = (int) (mPY1 + mParentHeight);
+        mPX2 = (int) (mScreenWidth / 2f + mParentWidth / 2f);
+        mPY2 = (int) (mTopHeight + mParentHeight);
 
-        //刚开始子控件的位置点
-        mCX1 = (int) (mScreenWidth / 2 - mParentWidth / 2);
-        mCY1 = (int) (mTopHeight);
-        mCX2 = (int) (mCX1 + mParentWidth);
-        mCY2 = (int) (mCY1 + mChildHeight);
+        //刚开始子控件1的位置点
+        mC1X1 = mPX1;
+        mC1Y1 = mPY1;
+        mC1X2 = mPX2;
+        mC1Y2 = mPY1;
 
-        invalidate();
+        //刚开始子控件2的位置点
+        mC2X1 = mPX1;
+        mC2Y1 = (int) (mTopHeight + mChildHeight);
+        mC2X2 = mPX2;
+        mC2Y2 = (int) (mTopHeight + mParentHeight);
+
+
     }
 
     public DragView(Context context, @Nullable AttributeSet attrs) {
@@ -118,14 +143,13 @@ public class DragView extends View {
         init(context);
     }
 
-
     @SuppressLint("ClickableViewAccessibility")
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         float beginY = 0;
-        if (mCY1 <= event.getRawY() && event.getRawY() <= mCY1 + mChildHeight &&
-                mCX1 <= event.getRawX() && event.getRawX() <= mCX1 + mParentWidth) {
-            //有效触控范围
+        //有效触控范围
+        if (mC1Y2 <= event.getRawY() && event.getRawY() <= mC1Y2 + mChildHeight &&
+                mC1X1 <= event.getRawX() && event.getRawX() <= mC1X1 + mParentWidth) {
             switch (event.getAction()) {
                 case MotionEvent.ACTION_DOWN:
                     //手指按下
@@ -135,22 +159,32 @@ public class DragView extends View {
                 case MotionEvent.ACTION_MOVE:
                     //手指移动
                     float y = event.getY() - beginY;
-                    if (Math.abs(y) > EFFECTIVE_RANGE) {
-                        //更改子控件坐标
-                        mCY1 = (int) (0 + y);
-                        mCY2 = (int) (mCY1 + mChildHeight);
-                        if (mCY1 < mTopHeight) {
-                            //Y1小于原定的坐标，防止顶部超过出
-                            mCY1 = (int) (mTopHeight);
-                            mCY2 = (int) (mCY1 + mChildHeight);
-                        } else if (mCY2 > mParentHeight + mTopHeight) {
-                            //Y2大于原定的坐标，防止底部超过
-                            mCY2 = (int) (mParentHeight + mTopHeight);
-                            mCY1 = (int) (mCY2 - mChildHeight);
-                        }
-                        //重新绘制
-                        invalidate();
+                    //if (Math.abs(y) > EFFECTIVE_RANGE) {
+                    //mC1Y1和mC2Y2始终不变
+                    //更改子控件坐标
+                    mC1Y2 = (int) y;
+
+                    mC2Y1 = (int) (y + mChildHeight);
+                    if (mC1Y2 < mTopHeight) {
+                        //防止顶部超过出
+
+                        //子控件1为0
+                        mC1Y2 = (int) (mTopHeight);
+
+                        //子控件2为最大
+                        mC2Y1 = (int) (mTopHeight + mChildHeight);
+
+                    } else if (mC1Y2 > mParentHeight + mTopHeight - mChildHeight) {
+                        //防止底部超过
+
+                        //子控件1为最大
+                        mC1Y2 = (int) (mTopHeight + mParentHeight - mChildHeight);
+                        //子控件2为0
+                        mC2Y1 = (int) (mTopHeight + mParentHeight);
                     }
+                    //重新绘制
+                    invalidate();
+                    //}
                     break;
                 case MotionEvent.ACTION_UP:
                     //手指抬起
@@ -167,34 +201,56 @@ public class DragView extends View {
         return true;
     }
 
+    @Override
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        super.onSizeChanged(w, h, oldw, oldh);
+        setMeasuredDimension((int) mParentWidth, (int) mParentHeight);
+    }
+
     @SuppressLint("DrawAllocation")
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
 
         //绘制父控件
-        canvas.drawRect(mPX1, mPY1, mPX2, mPY2, mParentPaint);
 
-        //绘制子空间
-        canvas.drawRect(mCX1, mCY1, mCX2, mCY2, mChildPaint);
+        // 指定图片绘制区域(左上角的四分之一)
+        Rect src = new Rect(0, 0, mParentBg.getWidth(), mParentBg.getHeight());
+        // 指定图片在屏幕上显示的区域
+        Rect dst = new Rect(mPX1, mPY1, mPX2, mPY2);
+        canvas.drawBitmap(mParentBg, src, dst, null);
+
+        //绘制子控件1
+        canvas.drawRect(mC1X1, mC1Y1, mC1X2, mC1Y2, mChildPaint);
+
+
+        //绘制子控件2
+        canvas.drawRect(mC2X1, mC2Y1, mC2X2, mC2Y2, mChildPaint);
     }
 
     /**
-     * 设置数据
+     * 设置图片
      */
-    public void setData(float parentHeight, float parentWidth, float childHeight, float topHeight, float bottomHeight) {
-        mParentHeight = parentHeight;
-        mParentWidth = parentWidth;
-        mChildHeight = childHeight;
-        mTopHeight = topHeight;
-        mBottomHeight = bottomHeight;
-        initCalc();
+    public void setData(Bitmap bitmap) {
+        if (bitmap == null) {
+            throw new RuntimeException("bitmap can't null");
+        }
+        mParentBg = bitmap;
+        invalidate();
     }
 
-    public Picture getPic() {
-        Picture picture = new Picture();
-        // 开始录制 (接收返回值Canvas)
-        Canvas canvas = picture.beginRecording((int) mParentWidth, (int) mChildHeight);
-        return picture;
+    public Bitmap getBitmap(Activity activity) {
+        View screenView = activity.getWindow().getDecorView();
+        screenView.setDrawingCacheEnabled(true);
+        screenView.buildDrawingCache();
+
+        //获取屏幕整张图
+        Bitmap bitmap = screenView.getDrawingCache();
+        //截图指定部分
+        if (bitmap != null) {
+            bitmap = Bitmap.createBitmap(bitmap, mC1X1, mC1Y2 + dp2px(mContext, 23f),
+                    (int) mParentWidth, (int) mChildHeight);
+        }
+        return bitmap;
     }
 }

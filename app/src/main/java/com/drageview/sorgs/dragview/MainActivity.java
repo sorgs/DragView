@@ -1,18 +1,18 @@
 package com.drageview.sorgs.dragview;
 
-import android.graphics.Picture;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 
-import com.bumptech.glide.Glide;
 import com.drageview.sorgs.dragview.widget.DragView;
 
 public class MainActivity extends AppCompatActivity {
-    private static final String TAG = "MainActivity";
+    public static final String TAG = "MainActivity";
+    private Bitmap mBitmap;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -20,7 +20,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         final DragView dragView = findViewById(R.id.dragView);
-        dragView.setData(900f, 500f, 300f, 100f, 200f);
+        dragView.setData(BitmapFactory.decodeResource(getResources(), R.drawable.text));
 
         Button btn = findViewById(R.id.btn);
         final ImageView iv = findViewById(R.id.iv);
@@ -28,9 +28,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 //截取选中区域
-                Picture pic = dragView.getPic();
-                Log.i(TAG, "onClick: " + pic);
-                Glide.with(MainActivity.this).load(pic).into(iv);
+                mBitmap = dragView.getBitmap(MainActivity.this);
+                iv.setImageBitmap(mBitmap);
 
             }
         });
