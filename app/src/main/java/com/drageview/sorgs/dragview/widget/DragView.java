@@ -18,8 +18,10 @@ import com.drageview.sorgs.dragview.R;
  * description: 拖拽View.
  *
  * @author Sorgs.
+ * @date 2018.5.14
  */
 public class DragView extends View {
+    private static final String TAG = "DragView";
 
     /**
      * 有效拖拽值
@@ -59,7 +61,7 @@ public class DragView extends View {
     /**
      * 控件顶部高度
      */
-    private float mTopHeight = 100f;
+    private float mTopHeight;
     /**
      * 控件底部高度
      */
@@ -72,6 +74,11 @@ public class DragView extends View {
     private Bitmap mParentBg;
 
     private Context mContext;
+    private float mDistanceY;
+    /**
+     * 记录按下的距离
+     */
+    private float mBeginY;
 
     public DragView(Context context) {
         super(context);
@@ -94,6 +101,7 @@ public class DragView extends View {
 
         mChildHeight = mParentWidth * 9 / 16f;
 
+        mTopHeight = dp2px(context, 50f);
 
         mChildPaint = new Paint();
         mChildPaint.setColor(context.getResources().getColor(R.color.colorT));
@@ -146,45 +154,51 @@ public class DragView extends View {
     @SuppressLint("ClickableViewAccessibility")
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        float beginY = 0;
         //有效触控范围
         if (mC1Y2 <= event.getRawY() && event.getRawY() <= mC1Y2 + mChildHeight &&
                 mC1X1 <= event.getRawX() && event.getRawX() <= mC1X1 + mParentWidth) {
             switch (event.getAction()) {
                 case MotionEvent.ACTION_DOWN:
                     //手指按下
-                    //记录按下的位置
-                    beginY = event.getY();
+                    //记录按下的距离
+                    mBeginY = event.getY();
+                    //记录按下的位置和选择区域的上边距的差
+                    mDistanceY = mBeginY - mC1Y2;
                     break;
                 case MotionEvent.ACTION_MOVE:
-                    //手指移动
-                    float y = event.getY() - beginY;
-                    //if (Math.abs(y) > EFFECTIVE_RANGE) {
-                    //mC1Y1和mC2Y2始终不变
-                    //更改子控件坐标
-                    mC1Y2 = (int) y;
+                    //手指移动的距离
+                    float y = event.getY() - mBeginY;
 
-                    mC2Y1 = (int) (y + mChildHeight);
-                    if (mC1Y2 < mTopHeight) {
-                        //防止顶部超过出
+                    if (Math.abs(y) > EFFECTIVE_RANGE) {
+                        //mC1Y1和mC2Y2始终不变
+                        //更改子控件坐标
+                        mC1Y2 = (int) (event.getY() - mDistanceY);
 
-                        //子控件1为0
-                        mC1Y2 = (int) (mTopHeight);
+                        mC2Y1 = (int) (event.getY() - mDistanceY + mChildHeight);
 
-                        //子控件2为最大
-                        mC2Y1 = (int) (mTopHeight + mChildHeight);
 
-                    } else if (mC1Y2 > mParentHeight + mTopHeight - mChildHeight) {
-                        //防止底部超过
+                        //往上滑动
+                        if (mC1Y2 < mTopHeight) {
+                            //防止顶部超过出
 
-                        //子控件1为最大
-                        mC1Y2 = (int) (mTopHeight + mParentHeight - mChildHeight);
-                        //子控件2为0
-                        mC2Y1 = (int) (mTopHeight + mParentHeight);
+                            //子控件1为0
+                            mC1Y2 = (int) (mTopHeight);
+
+                            //子控件2为最大
+                            mC2Y1 = (int) (mTopHeight + mChildHeight);
+
+                        } else if (mC1Y2 > mParentHeight + mTopHeight - mChildHeight) {
+                            //防止底部超过
+
+                            //子控件1为最大
+                            mC1Y2 = (int) (mTopHeight + mParentHeight - mChildHeight);
+                            //子控件2为0
+                            mC2Y1 = (int) (mTopHeight + mParentHeight);
+                        }
                     }
+
                     //重新绘制
                     invalidate();
-                    //}
                     break;
                 case MotionEvent.ACTION_UP:
                     //手指抬起
@@ -248,9 +262,21 @@ public class DragView extends View {
         Bitmap bitmap = screenView.getDrawingCache();
         //截图指定部分
         if (bitmap != null) {
-            bitmap = Bitmap.createBitmap(bitmap, mC1X1, mC1Y2 + dp2px(mContext, 23f),
+            bitmap = Bitmap.createBitmap(bitmap, mC1X1, mC1Y2 + getStatusBarHeight(),
                     (int) mParentWidth, (int) mChildHeight);
         }
         return bitmap;
+    }
+
+    /**
+     * 获取状态栏高度
+     */
+    private int getStatusBarHeight() {
+        int result = 0;
+        int resourceId = mContext.getResources().getIdentifier("status_bar_height", "dimen", "android");
+        if (resourceId > 0) {
+            result = mContext.getResources().getDimensionPixelSize(resourceId);
+        }
+        return result;
     }
 }
