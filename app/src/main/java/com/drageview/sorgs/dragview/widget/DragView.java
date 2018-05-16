@@ -21,8 +21,6 @@ import com.drageview.sorgs.dragview.R;
  * @date 2018.5.14
  */
 public class DragView extends View {
-    private static final String TAG = "DragView";
-
     /**
      * 有效拖拽值
      */
@@ -30,14 +28,17 @@ public class DragView extends View {
 
 
     private Paint mChildPaint;
+
     private int mPX1;
     private int mPY1;
     private int mPX2;
     private int mPY2;
+
     private int mC1X1;
     private int mC1Y1;
     private int mC1X2;
     private int mC1Y2;
+
     private int mC2X1;
     private int mC2Y1;
     private int mC2X2;
@@ -62,10 +63,6 @@ public class DragView extends View {
      * 控件顶部高度
      */
     private float mTopHeight;
-    /**
-     * 控件底部高度
-     */
-    private float mBottomHeight;
     /**
      * 屏幕宽度
      */
@@ -93,14 +90,17 @@ public class DragView extends View {
 
         mContext = context;
 
+        //屏幕高度
         mScreenHeight = getResources().getDisplayMetrics().heightPixels;
+        //屏幕宽度
         mScreenWidth = getResources().getDisplayMetrics().widthPixels;
-
+        //父控件宽度
         mParentWidth = mScreenWidth - 2 * dp2px(context, 79f);
+        //父控件高度
         mParentHeight = mParentWidth * 360 / 203f;
-
+        //选中区域高度
         mChildHeight = mParentWidth * 9 / 16f;
-
+        //父控件距离屏幕高度
         mTopHeight = dp2px(context, 50f);
 
         mChildPaint = new Paint();
@@ -136,7 +136,7 @@ public class DragView extends View {
         mC2X1 = mPX1;
         mC2Y1 = (int) (mTopHeight + mChildHeight);
         mC2X2 = mPX2;
-        mC2Y2 = (int) (mTopHeight + mParentHeight);
+        mC2Y2 = mPY2;
 
 
     }
@@ -196,7 +196,6 @@ public class DragView extends View {
                             mC2Y1 = (int) (mTopHeight + mParentHeight);
                         }
                     }
-
                     //重新绘制
                     invalidate();
                     break;
