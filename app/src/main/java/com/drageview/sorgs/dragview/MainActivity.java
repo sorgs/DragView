@@ -11,7 +11,6 @@ import android.widget.ImageView;
 import com.drageview.sorgs.dragview.widget.DragView;
 
 public class MainActivity extends AppCompatActivity {
-    public static final String TAG = "MainActivity";
     private Bitmap mBitmap;
 
     @Override
